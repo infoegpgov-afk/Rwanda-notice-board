@@ -1,0 +1,667 @@
+// This is your Prisma schema file,
+// learn more about it in the docs: https://pris.ly/d/prisma-schema
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+// Enums
+enum UserRole {
+  SUPER_ADMIN
+  ADMIN
+  EDITOR
+  AUTHOR
+  MODERATOR
+  USER
+}
+
+enum ContentType {
+  NEWS
+  ANNOUNCEMENT
+  JOB
+  OPPORTUNITY
+  EDUCATION
+  HEALTH
+  BUSINESS
+  EVENT
+  TOURISM
+}
+
+enum VerificationStatus {
+  VERIFIED
+  PENDING
+  UNVERIFIED
+}
+
+enum ReportStatus {
+  PENDING
+  REVIEWING
+  RESOLVED
+  DISMISSED
+}
+
+enum ReportReason {
+  FALSE_INFORMATION
+  SPAM
+  INAPPROPRIATE_CONTENT
+  SCAM
+  COPYRIGHT_ISSUE
+  OTHER
+}
+
+enum Language {
+  KIN
+  ENG
+}
+
+// Models
+model User {
+  id            String     @id @default(cuid())
+  email         String     @unique
+  password      String?
+  name          String?
+  image         String?
+  bio           String?
+  role          UserRole   @default(USER)
+  isActive      Boolean    @default(true)
+  emailVerified DateTime?
+  createdAt     DateTime   @default(now())
+  updatedAt     DateTime   @updatedAt
+
+  // Relations
+  newsArticles      News[]
+  announcements     Announcement[]
+  jobs              Job[]
+  opportunities     Opportunity[]
+  educations        Education[]
+  health            Health[]
+  businesses        Business[]
+  events            Event[]
+  tourism           Tourism[]
+  reports           ContentReport[]
+  contactMessages   ContactMessage[]
+  newsletterEmails  NewsletterSubscriber[]
+  sessions          Session[]
+  accounts          Account[]
+  mediaItems        Media[]
+  verifications     Verification[]
+
+  @@index([email])
+  @@index([role])
+  @@index([isActive])
+}
+
+model Account {
+  id                 String  @id @default(cuid())
+  userId             String
+  type               String
+  provider           String
+  providerAccountId  String
+  refresh_token      String?  @db.Text
+  access_token       String?  @db.Text
+  expires_at         Int?
+  token_type         String?
+  scope              String?
+  id_token           String?  @db.Text
+  session_state      String?
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([provider, providerAccountId])
+  @@index([userId])
+}
+
+model Session {
+  id           String   @id @default(cuid())
+  sessionToken String   @unique
+  userId       String
+  expires      DateTime
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+}
+
+model Category {
+  id          String   @id @default(cuid())
+  name        String   @unique
+  nameKin     String?  @unique
+  description String?
+  slug        String   @unique
+  icon        String?
+  color       String?
+  contentType ContentType
+  isActive    Boolean  @default(true)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  // Relations
+  news          News[]
+  announcements Announcement[]
+  jobs          Job[]
+  opportunities Opportunity[]
+  educations    Education[]
+  health        Health[]
+  businesses    Business[]
+  events        Event[]
+  tourism       Tourism[]
+
+  @@index([contentType])
+  @@index([slug])
+  @@index([isActive])
+}
+
+model News {
+  id                String   @id @default(cuid())
+  title             String
+  titleKin          String?
+  slug              String   @unique
+  excerpt           String?
+  excerptKin        String?
+  content           String   @db.Text
+  contentKin        String?  @db.Text
+  authorId          String
+  categoryId        String
+  featuredImage     String?
+  isFeatured        Boolean  @default(false)
+  isUrgent          Boolean  @default(false)
+  verificationStatus VerificationStatus @default(UNVERIFIED)
+  publishedAt       DateTime?
+  archivedAt        DateTime?
+  createdAt         DateTime @default(now())
+  updatedAt         DateTime @updatedAt
+
+  // Relations
+  author            User     @relation(fields: [authorId], references: [id], onDelete: Cascade)
+  category          Category @relation(fields: [categoryId], references: [id], onDelete: Restrict)
+  media             Media[]
+  reports           ContentReport[]
+  verification      Verification?
+
+  @@index([authorId])
+  @@index([categoryId])
+  @@index([slug])
+  @@index([publishedAt])
+  @@index([verificationStatus])
+  @@index([isFeatured])
+  @@index([isUrgent])
+}
+
+model Announcement {
+  id                String   @id @default(cuid())
+  title             String
+  titleKin          String?
+  slug              String   @unique
+  excerpt           String?
+  excerptKin        String?
+  content           String   @db.Text
+  contentKin        String?  @db.Text
+  authorId          String
+  categoryId        String
+  featuredImage     String?
+  isFeatured        Boolean  @default(false)
+  isUrgent          Boolean  @default(false)
+  verificationStatus VerificationStatus @default(UNVERIFIED)
+  publishedAt       DateTime?
+  archivedAt        DateTime?
+  createdAt         DateTime @default(now())
+  updatedAt         DateTime @updatedAt
+
+  // Relations
+  author            User     @relation(fields: [authorId], references: [id], onDelete: Cascade)
+  category          Category @relation(fields: [categoryId], references: [id], onDelete: Restrict)
+  media             Media[]
+  reports           ContentReport[]
+  verification      Verification?
+
+  @@index([authorId])
+  @@index([categoryId])
+  @@index([slug])
+  @@index([publishedAt])
+  @@index([verificationStatus])
+  @@index([isFeatured])
+}
+
+model Job {
+  id                String   @id @default(cuid())
+  title             String
+  titleKin          String?
+  slug              String   @unique
+  excerpt           String?
+  excerptKin        String?
+  description       String   @db.Text
+  descriptionKin    String?  @db.Text
+  company           String
+  location          String
+  jobType           String   // Full-time, Part-time, Contract, etc.
+  salary            String?  // min-max or description
+  authorId          String
+  categoryId        String
+  featuredImage     String?
+  isFeatured        Boolean  @default(false)
+  isUrgent          Boolean  @default(false)
+  verificationStatus VerificationStatus @default(UNVERIFIED)
+  applicationUrl    String?
+  deadlineAt        DateTime?
+  publishedAt       DateTime?
+  archivedAt        DateTime?
+  createdAt         DateTime @default(now())
+  updatedAt         DateTime @updatedAt
+
+  // Relations
+  author            User     @relation(fields: [authorId], references: [id], onDelete: Cascade)
+  category          Category @relation(fields: [categoryId], references: [id], onDelete: Restrict)
+  media             Media[]
+  reports           ContentReport[]
+  verification      Verification?
+
+  @@index([authorId])
+  @@index([categoryId])
+  @@index([slug])
+  @@index([publishedAt])
+  @@index([verificationStatus])
+  @@index([isFeatured])
+}
+
+model Opportunity {
+  id                String   @id @default(cuid())
+  title             String
+  titleKin          String?
+  slug              String   @unique
+  excerpt           String?
+  excerptKin        String?
+  description       String   @db.Text
+  descriptionKin    String?  @db.Text
+  opportunityType   String   // Scholarship, Grant, Fellowship, etc.
+  authorId          String
+  categoryId        String
+  featuredImage     String?
+  isFeatured        Boolean  @default(false)
+  isUrgent          Boolean  @default(false)
+  verificationStatus VerificationStatus @default(UNVERIFIED)
+  applicationUrl    String?
+  deadlineAt        DateTime?
+  publishedAt       DateTime?
+  archivedAt        DateTime?
+  createdAt         DateTime @default(now())
+  updatedAt         DateTime @updatedAt
+
+  // Relations
+  author            User     @relation(fields: [authorId], references: [id], onDelete: Cascade)
+  category          Category @relation(fields: [categoryId], references: [id], onDelete: Restrict)
+  media             Media[]
+  reports           ContentReport[]
+  verification      Verification?
+
+  @@index([authorId])
+  @@index([categoryId])
+  @@index([slug])
+  @@index([publishedAt])
+  @@index([verificationStatus])
+  @@index([isFeatured])
+}
+
+model Education {
+  id                String   @id @default(cuid())
+  title             String
+  titleKin          String?
+  slug              String   @unique
+  excerpt           String?
+  excerptKin        String?
+  content           String   @db.Text
+  contentKin        String?  @db.Text
+  authorId          String
+  categoryId        String
+  featuredImage     String?
+  isFeatured        Boolean  @default(false)
+  isUrgent          Boolean  @default(false)
+  verificationStatus VerificationStatus @default(UNVERIFIED)
+  publishedAt       DateTime?
+  archivedAt        DateTime?
+  createdAt         DateTime @default(now())
+  updatedAt         DateTime @updatedAt
+
+  // Relations
+  author            User     @relation(fields: [authorId], references: [id], onDelete: Cascade)
+  category          Category @relation(fields: [categoryId], references: [id], onDelete: Restrict)
+  media             Media[]
+  reports           ContentReport[]
+  verification      Verification?
+
+  @@index([authorId])
+  @@index([categoryId])
+  @@index([slug])
+  @@index([publishedAt])
+  @@index([verificationStatus])
+  @@index([isFeatured])
+}
+
+model Health {
+  id                String   @id @default(cuid())
+  title             String
+  titleKin          String?
+  slug              String   @unique
+  excerpt           String?
+  excerptKin        String?
+  content           String   @db.Text
+  contentKin        String?  @db.Text
+  authorId          String
+  categoryId        String
+  featuredImage     String?
+  isFeatured        Boolean  @default(false)
+  isUrgent          Boolean  @default(false)
+  verificationStatus VerificationStatus @default(UNVERIFIED)
+  publishedAt       DateTime?
+  archivedAt        DateTime?
+  createdAt         DateTime @default(now())
+  updatedAt         DateTime @updatedAt
+
+  // Relations
+  author            User     @relation(fields: [authorId], references: [id], onDelete: Cascade)
+  category          Category @relation(fields: [categoryId], references: [id], onDelete: Restrict)
+  media             Media[]
+  reports           ContentReport[]
+  verification      Verification?
+
+  @@index([authorId])
+  @@index([categoryId])
+  @@index([slug])
+  @@index([publishedAt])
+  @@index([verificationStatus])
+  @@index([isFeatured])
+}
+
+model Business {
+  id                String   @id @default(cuid())
+  title             String
+  titleKin          String?
+  slug              String   @unique
+  excerpt           String?
+  excerptKin        String?
+  content           String   @db.Text
+  contentKin        String?  @db.Text
+  authorId          String
+  categoryId        String
+  featuredImage     String?
+  isFeatured        Boolean  @default(false)
+  isUrgent          Boolean  @default(false)
+  verificationStatus VerificationStatus @default(UNVERIFIED)
+  publishedAt       DateTime?
+  archivedAt        DateTime?
+  createdAt         DateTime @default(now())
+  updatedAt         DateTime @updatedAt
+
+  // Relations
+  author            User     @relation(fields: [authorId], references: [id], onDelete: Cascade)
+  category          Category @relation(fields: [categoryId], references: [id], onDelete: Restrict)
+  media             Media[]
+  reports           ContentReport[]
+  verification      Verification?
+
+  @@index([authorId])
+  @@index([categoryId])
+  @@index([slug])
+  @@index([publishedAt])
+  @@index([verificationStatus])
+  @@index([isFeatured])
+}
+
+model Event {
+  id                String   @id @default(cuid())
+  title             String
+  titleKin          String?
+  slug              String   @unique
+  excerpt           String?
+  excerptKin        String?
+  description       String   @db.Text
+  descriptionKin    String?  @db.Text
+  authorId          String
+  categoryId        String
+  featuredImage     String?
+  isFeatured        Boolean  @default(false)
+  isUrgent          Boolean  @default(false)
+  verificationStatus VerificationStatus @default(UNVERIFIED)
+  location          String?
+  eventDate         DateTime?
+  eventEndDate      DateTime?
+  eventUrl          String?
+  publishedAt       DateTime?
+  archivedAt        DateTime?
+  createdAt         DateTime @default(now())
+  updatedAt         DateTime @updatedAt
+
+  // Relations
+  author            User     @relation(fields: [authorId], references: [id], onDelete: Cascade)
+  category          Category @relation(fields: [categoryId], references: [id], onDelete: Restrict)
+  media             Media[]
+  reports           ContentReport[]
+  verification      Verification?
+
+  @@index([authorId])
+  @@index([categoryId])
+  @@index([slug])
+  @@index([publishedAt])
+  @@index([verificationStatus])
+  @@index([isFeatured])
+  @@index([eventDate])
+}
+
+model Tourism {
+  id                String   @id @default(cuid())
+  title             String
+  titleKin          String?
+  slug              String   @unique
+  excerpt           String?
+  excerptKin        String?
+  content           String   @db.Text
+  contentKin        String?  @db.Text
+  authorId          String
+  categoryId        String
+  featuredImage     String?
+  isFeatured        Boolean  @default(false)
+  isUrgent          Boolean  @default(false)
+  verificationStatus VerificationStatus @default(UNVERIFIED)
+  location          String?
+  website           String?
+  phone             String?
+  publishedAt       DateTime?
+  archivedAt        DateTime?
+  createdAt         DateTime @default(now())
+  updatedAt         DateTime @updatedAt
+
+  // Relations
+  author            User     @relation(fields: [authorId], references: [id], onDelete: Cascade)
+  category          Category @relation(fields: [categoryId], references: [id], onDelete: Restrict)
+  media             Media[]
+  reports           ContentReport[]
+  verification      Verification?
+
+  @@index([authorId])
+  @@index([categoryId])
+  @@index([slug])
+  @@index([publishedAt])
+  @@index([verificationStatus])
+  @@index([isFeatured])
+}
+
+model Media {
+  id        String   @id @default(cuid())
+  url       String
+  type      String   // image, video, document
+  mimeType  String?
+  size      Int?
+  fileName  String?
+  altText   String?
+  
+  newsId            String?
+  announcementId    String?
+  jobId             String?
+  opportunityId     String?
+  educationId       String?
+  healthId          String?
+  businessId        String?
+  eventId           String?
+  tourismId         String?
+  userId            String?
+  
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  // Relations
+  news          News?         @relation(fields: [newsId], references: [id], onDelete: Cascade)
+  announcement  Announcement? @relation(fields: [announcementId], references: [id], onDelete: Cascade)
+  job           Job?          @relation(fields: [jobId], references: [id], onDelete: Cascade)
+  opportunity   Opportunity?  @relation(fields: [opportunityId], references: [id], onDelete: Cascade)
+  education     Education?    @relation(fields: [educationId], references: [id], onDelete: Cascade)
+  health        Health?       @relation(fields: [healthId], references: [id], onDelete: Cascade)
+  business      Business?     @relation(fields: [businessId], references: [id], onDelete: Cascade)
+  event         Event?        @relation(fields: [eventId], references: [id], onDelete: Cascade)
+  tourism       Tourism?      @relation(fields: [tourismId], references: [id], onDelete: Cascade)
+  user          User?         @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([newsId])
+  @@index([announcementId])
+  @@index([jobId])
+  @@index([opportunityId])
+  @@index([educationId])
+  @@index([healthId])
+  @@index([businessId])
+  @@index([eventId])
+  @@index([tourismId])
+  @@index([userId])
+}
+
+model Verification {
+  id        String   @id @default(cuid())
+  status    VerificationStatus @default(UNVERIFIED)
+  reviewedBy String?
+  reviewedAt DateTime?
+  notes      String?
+  
+  newsId            String? @unique
+  announcementId    String? @unique
+  jobId             String? @unique
+  opportunityId     String? @unique
+  educationId       String? @unique
+  healthId          String? @unique
+  businessId        String? @unique
+  eventId           String? @unique
+  tourismId         String? @unique
+  
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  // Relations
+  news          News?         @relation(fields: [newsId], references: [id], onDelete: Cascade)
+  announcement  Announcement? @relation(fields: [announcementId], references: [id], onDelete: Cascade)
+  job           Job?          @relation(fields: [jobId], references: [id], onDelete: Cascade)
+  opportunity   Opportunity?  @relation(fields: [opportunityId], references: [id], onDelete: Cascade)
+  education     Education?    @relation(fields: [educationId], references: [id], onDelete: Cascade)
+  health        Health?       @relation(fields: [healthId], references: [id], onDelete: Cascade)
+  business      Business?     @relation(fields: [businessId], references: [id], onDelete: Cascade)
+  event         Event?        @relation(fields: [eventId], references: [id], onDelete: Cascade)
+  tourism       Tourism?      @relation(fields: [tourismId], references: [id], onDelete: Cascade)
+  reviewer      User?         @relation(fields: [reviewedBy], references: [id], onDelete: SetNull)
+
+  @@index([status])
+  @@index([reviewedAt])
+}
+
+model ContentReport {
+  id        String   @id @default(cuid())
+  reason    ReportReason
+  description String? @db.Text
+  status    ReportStatus @default(PENDING)
+  reviewedBy String?
+  reviewedAt DateTime?
+  resolution String?  @db.Text
+  reporterEmail String?
+  
+  newsId            String?
+  announcementId    String?
+  jobId             String?
+  opportunityId     String?
+  educationId       String?
+  healthId          String?
+  businessId        String?
+  eventId           String?
+  tourismId         String?
+  
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  // Relations
+  news          News?         @relation(fields: [newsId], references: [id], onDelete: Cascade)
+  announcement  Announcement? @relation(fields: [announcementId], references: [id], onDelete: Cascade)
+  job           Job?          @relation(fields: [jobId], references: [id], onDelete: Cascade)
+  opportunity   Opportunity?  @relation(fields: [opportunityId], references: [id], onDelete: Cascade)
+  education     Education?    @relation(fields: [educationId], references: [id], onDelete: Cascade)
+  health        Health?       @relation(fields: [healthId], references: [id], onDelete: Cascade)
+  business      Business?     @relation(fields: [businessId], references: [id], onDelete: Cascade)
+  event         Event?        @relation(fields: [eventId], references: [id], onDelete: Cascade)
+  tourism       Tourism?      @relation(fields: [tourismId], references: [id], onDelete: Cascade)
+  reviewer      User?         @relation(fields: [reviewedBy], references: [id], onDelete: SetNull)
+
+  @@index([reason])
+  @@index([status])
+  @@index([newsId])
+  @@index([announcementId])
+  @@index([jobId])
+}
+
+model ContactMessage {
+  id        String   @id @default(cuid())
+  name      String
+  email     String
+  phone     String?
+  subject   String
+  message   String   @db.Text
+  isRead    Boolean  @default(false)
+  respondedAt DateTime?
+  response  String?  @db.Text
+  userId    String?
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  // Relations
+  user      User?    @relation(fields: [userId], references: [id], onDelete: SetNull)
+
+  @@index([email])
+  @@index([isRead])
+  @@index([createdAt])
+}
+
+model NewsletterSubscriber {
+  id           String   @id @default(cuid())
+  email        String   @unique
+  name         String?
+  isActive     Boolean  @default(true)
+  unsubscribedAt DateTime?
+  userId       String?
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+
+  // Relations
+  user         User?    @relation(fields: [userId], references: [id], onDelete: SetNull)
+
+  @@index([email])
+  @@index([isActive])
+}
+
+model SiteSettings {
+  id           String   @id @default(cuid())
+  key          String   @unique
+  value        String   @db.Text
+  description  String?
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+
+  @@index([key])
+}
