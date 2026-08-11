@@ -1,6 +1,5 @@
 import Link from 'next/link';
 import { NewsCard } from '@/components/NewsCard';
-import { EmptyState } from '@/components/EmptyState';
 
 export const metadata = {
   title: 'Home',
